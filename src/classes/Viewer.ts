@@ -22,6 +22,12 @@ export class Viewer {
 
   private readonly dirLight: THREE.DirectionalLight;
 
+  private readonly cubeRT: THREE.WebGLCubeRenderTarget;
+  private readonly cubeMaterial: THREE.MeshBasicMaterial;
+  private readonly cubeMesh: THREE.Mesh;
+  private readonly cubeScene: THREE.Scene;
+  private readonly cubeCamera: THREE.CubeCamera;
+
   constructor(private readonly renderer: THREE.WebGLRenderer, private readonly canvas: HTMLCanvasElement) {
     this.scene = new THREE.Scene();
 
@@ -35,7 +41,18 @@ export class Viewer {
 
     this.dirLight = new THREE.DirectionalLight(undefined, 0.75);
 
-    this.scene.add(this.dirLight);
+    //this.scene.add(this.dirLight);
+
+    // Set up cube stuff so we can rotate the envmap...
+    this.cubeRT = new THREE.WebGLCubeRenderTarget(256, { type: THREE.FloatType });
+    this.cubeScene = new THREE.Scene();
+    this.cubeCamera = new THREE.CubeCamera(0.1, 100, this.cubeRT);
+    this.cubeMaterial = new THREE.MeshBasicMaterial({ side: THREE.BackSide });
+    this.cubeMesh = new THREE.Mesh(new THREE.SphereGeometry(1), this.cubeMaterial);
+    this.cubeMesh.frustumCulled = false;
+    this.cubeScene.add(this.cubeMesh);
+
+    this.scene.environment = this.cubeRT.texture;
 
     this.loadEnvMap();
     this.setupScene();
@@ -53,8 +70,11 @@ export class Viewer {
       this.camera.updateProjectionMatrix();
     }
 
-    const elapsed = performance.now() * 0.001;
-    this.dirLight.position.set(Math.sin(elapsed), 1, Math.cos(elapsed)).normalize();
+    this.cubeMesh.rotation.y += 0.5 * dt;
+    this.cubeCamera.update(this.renderer, this.cubeScene);
+
+    // const elapsed = performance.now() * 0.001;
+    // this.dirLight.position.set(Math.sin(elapsed), 1, Math.cos(elapsed)).normalize();
 
     this.renderer.render(this.scene, this.camera);
   };
@@ -62,12 +82,14 @@ export class Viewer {
   private loadEnvMap() {
     const loader = new RGBELoader();
 
-    loader.load('./assets/envMap.hdr', tex => {
+    loader.load('./assets/studio.hdr', tex => {
       tex.mapping = THREE.EquirectangularReflectionMapping;
       tex.wrapS = THREE.RepeatWrapping;
       tex.wrapT = THREE.RepeatWrapping;
 
-      this.scene.environment = tex;
+      //this.scene.environment = tex;
+      this.cubeMaterial.map = tex;
+      this.cubeMaterial.needsUpdate = true;
     });
   }
 
