@@ -25,8 +25,6 @@ renderer.toneMapping = THREE.LinearToneMapping;
 renderer.toneMappingExposure = 1.0;
 
 const viewer = new Viewer(renderer, canvas);
-const resizeObserver = new ResizeObserver(viewer.resize);
-resizeObserver.observe(canvas);
 
 function init() {
   clock.start();
