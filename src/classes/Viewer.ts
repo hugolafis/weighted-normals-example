@@ -20,18 +20,22 @@ export class Viewer {
   private readonly canvasSize: THREE.Vector2;
   private readonly renderSize: THREE.Vector2;
 
+  private readonly dirLight: THREE.DirectionalLight;
+
   constructor(private readonly renderer: THREE.WebGLRenderer, private readonly canvas: HTMLCanvasElement) {
     this.scene = new THREE.Scene();
 
     this.camera = new THREE.PerspectiveCamera(75, this.canvas.clientWidth / this.canvas.clientHeight);
-    this.camera.position.set(0, 1, 2);
+    this.camera.position.set(0, 2, 3);
     this.controls = new OrbitControls(this.camera, this.canvas);
     this.controls.target.set(0, 0.5, 0);
 
     this.canvasSize = new THREE.Vector2(this.canvas.clientWidth, this.canvas.clientHeight);
     this.renderSize = new THREE.Vector2();
 
-    this.scene.add(new THREE.AmbientLight());
+    this.dirLight = new THREE.DirectionalLight(undefined, 0.75);
+
+    this.scene.add(this.dirLight);
 
     this.loadEnvMap();
     this.setupScene();
@@ -48,6 +52,9 @@ export class Viewer {
       this.camera.aspect = this.canvasSize.x / this.canvasSize.y;
       this.camera.updateProjectionMatrix();
     }
+
+    const elapsed = performance.now() * 0.001;
+    this.dirLight.position.set(Math.sin(elapsed), 1, Math.cos(elapsed)).normalize();
 
     this.renderer.render(this.scene, this.camera);
   };
@@ -67,31 +74,33 @@ export class Viewer {
   private setupScene() {
     const loader = new FBXLoader();
 
-    const promises = [loader.loadAsync('./assets/box_1.fbx'), loader.loadAsync('./assets/box_2.fbx')];
+    //const promises = [loader.loadAsync('./assets/box_1.fbx'), loader.loadAsync('./assets/box_2.fbx')];
+    //const promises = [loader.loadAsync('./assets/pipe_1.fbx'), loader.loadAsync('./assets/pipe_2.fbx')];
+    const promises = [loader.loadAsync('./assets/container_1.fbx'), loader.loadAsync('./assets/container_2.fbx')];
 
     let i = 0;
-    const material = new THREE.MeshPhysicalMaterial({ roughness: 0.5, color: 0xcccccc, metalness: 1 });
+    const material = new THREE.MeshPhysicalMaterial({
+      roughness: 0.2,
+      color: 0xcccccc,
+      metalness: 1,
+      envMapIntensity: 1,
+    });
     const wireframeMat = new THREE.MeshBasicMaterial({ wireframe: true });
     Promise.all(promises).then(promises => {
       for (const group of promises) {
         const mesh = group.children[0].clone() as THREE.Mesh;
 
         this.scene.add(mesh);
-        mesh.position.x = -2 + i * 2;
-        mesh.position.z = 2;
+        mesh.position.x = -0.75 + i * 1.5;
+        mesh.position.z = 1;
         mesh.position.y = 0.0;
         i++;
 
-        mesh.scale.multiplyScalar(0.01);
         mesh.material = material;
-        const vertices = mesh.geometry.getAttribute('position');
-        console.log(vertices);
-
-        console.log(mesh.name);
 
         // Clone for showing wireframes
         const wireframeMesh = mesh.clone();
-        wireframeMesh.position.z = -2;
+        wireframeMesh.position.z = -1;
         wireframeMesh.material = wireframeMat;
         this.scene.add(wireframeMesh);
 
